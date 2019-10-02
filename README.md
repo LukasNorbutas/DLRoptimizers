@@ -25,7 +25,14 @@ NOTE: get_lr_multipliers() currently works with ImageLearner class (not keras.Mo
   
   # Create a parameter: lr_multiplier dictionary
   my_dict = dlr.get_lr_multipliers(learner, (1e-4,), params=True)
-  
+  print(my_dict)
+```
+```
+  > {'conv1_conv_11/kernel:0': 0.3, 'conv1_conv_11/bias:0': 0.3, 'conv1_bn_11/gamma:0': 0.3,
+    [...]
+    batch_normalization_11/moving_variance:0': 1, 'dense_11/kernel:0': 1, 'dense_11/bias:0': 1}
+```
+```python
   # Pass the dictionary to a DLR optimizer 
   learner.model.compile(optimizer=dlr.DLR_Adam(learning_rate=1e-4, param_lrs=my_dict),
                        loss=keras.losses.sparse_categorical_crossentropy,
