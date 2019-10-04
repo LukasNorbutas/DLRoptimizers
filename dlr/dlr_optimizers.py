@@ -13,7 +13,7 @@ from tensorflow.python.ops import state_ops
 from tensorflow.python.training import training_ops
 from tensorflow.python.util.tf_export import keras_export
 
-class DLR_Adam(keras.optimizers.Optimizer):
+class DLR_Adam(tensorflow.keras.optimizers.Optimizer):
     """
     Tensorflow Keras Adam optimizer, edited to support discriminative learning rates. Takes an additional
     input param_lrs, which is a dictionary that contains model's parameters and learning_rate multipliers.
@@ -41,6 +41,11 @@ class DLR_Adam(keras.optimizers.Optimizer):
         self.epsilon = epsilon or backend_config.epsilon()
         self.amsgrad = amsgrad
         self.param_lrs = param_lrs
+
+        initiation_dict = {v: 1 for (v,k) in self.param_lrs}
+        self.initiation_dict = initiation_dict
+
+        print("NOTE: Discriminative LR Adam is used.")
 
     def _create_slots(self, var_list):
 
@@ -109,7 +114,9 @@ class DLR_Adam(keras.optimizers.Optimizer):
         m = self.get_slot(var, 'm')
         v = self.get_slot(var, 'v')
 
-
+        if self.initiation_dict[var.name] == 1:
+            coefficients['lr_t'] = coefficients['lr_t'] * self.param_lrs[var.name]
+            self.initiation_dict[var.name] = 0
         if not self.amsgrad:
             return training_ops.resource_apply_adam(
                 var.handle,
@@ -117,7 +124,7 @@ class DLR_Adam(keras.optimizers.Optimizer):
                 v.handle,
                 coefficients['beta_1_power'],
                 coefficients['beta_2_power'],
-                math_ops.multiply(coefficients['lr_t'], self.param_lrs[var.name]),
+                coefficients['lr_t'],
                 coefficients['beta_1_t'],
                 coefficients['beta_2_t'],
                 coefficients['epsilon'],
@@ -133,7 +140,7 @@ class DLR_Adam(keras.optimizers.Optimizer):
                 vhat.handle,
                 coefficients['beta_1_power'],
                 coefficients['beta_2_power'],
-                math_ops.multiply(coefficients['lr_t'], self.param_lrs[var.name]),
+                coefficients['lr_t'],
                 coefficients['beta_1_t'],
                 coefficients['beta_2_t'],
                 coefficients['epsilon'],
@@ -175,10 +182,17 @@ class DLR_Adam(keras.optimizers.Optimizer):
 
         if not self.amsgrad:
             v_sqrt = math_ops.sqrt(v_t)
-            var_update = state_ops.assign_sub(var,
-                    math_ops.mult(coefficients['lr'], self.param_lrs[var.name])
-                    * m_t / (v_sqrt + coefficients['epsilon']),
-                    use_locking=self._use_locking)
+            if self.initiation_dict[var.name] == 1:
+                var_update = state_ops.assign_sub(var,
+                        coefficients['lr'] * self.param_lrs[var.name] \
+                        * m_t / (v_sqrt + coefficients['epsilon']),
+                        use_locking=self._use_locking)
+                self.initiation_dict[var.name] = 0
+            else:
+                var_update = state_ops.assign_sub(var,
+                        coefficients['lr'] \
+                        * m_t / (v_sqrt + coefficients['epsilon']),
+                        use_locking=self._use_locking)
             return control_flow_ops.group(*[var_update, m_t, v_t])
         else:
             v_hat = self.get_slot(var, 'vhat')
@@ -187,10 +201,17 @@ class DLR_Adam(keras.optimizers.Optimizer):
                 v_hat_t = state_ops.assign(v_hat, v_hat_t,
                         use_locking=self._use_locking)
             v_hat_sqrt = math_ops.sqrt(v_hat_t)
-            var_update = state_ops.assign_sub(var,
-                    math_ops.mult(coefficients['lr'], self.param_lrs[var.name])
-                    * m_t / (v_hat_sqrt + coefficients['epsilon']),
-                    use_locking=self._use_locking)
+            if self.initiation.dict[var.name] == 1:
+                var_update = state_ops.assign_sub(var,
+                        coefficients['lr'] * self.param_lrs[var.name] \
+                        * m_t / (v_sqrt + coefficients['epsilon']),
+                        use_locking=self._use_locking)
+                self.initiation_dict[var.name] = 0
+            else:
+                var_update = state_ops.assign_sub(var,
+                        coefficients['lr'] \
+                        * m_t / (v_hat_sqrt + coefficients['epsilon']),
+                        use_locking=self._use_locking)
             return control_flow_ops.group(*[var_update, m_t, v_t,
                     v_hat_t])
 
