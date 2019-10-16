@@ -65,7 +65,7 @@ def get_lr_multipliers(
         split_1.update(split_3)
         lr_slices = split_1
         if params:
-            return layer_to_param_dict(lr_slices)
+            return layer_to_param_dict(lr_slices, model)
         else:
             return lr_slices
 

@@ -13,7 +13,8 @@ from tensorflow.python.ops import state_ops
 from tensorflow.python.training import training_ops
 from tensorflow.python.util.tf_export import keras_export
 
-class DLR_Adam(tensorflow.keras.optimizers.Optimizer):
+
+class DLR_Adam(keras.optimizers.Optimizer):
     """
     Tensorflow Keras Adam optimizer, edited to support discriminative learning rates. Takes an additional
     input param_lrs, which is a dictionary that contains model's parameters and learning_rate multipliers.
@@ -42,7 +43,7 @@ class DLR_Adam(tensorflow.keras.optimizers.Optimizer):
         self.amsgrad = amsgrad
         self.param_lrs = param_lrs
 
-        initiation_dict = {v: 1 for (v,k) in self.param_lrs}
+        initiation_dict = {k: 1 for (k,v) in self.param_lrs.items()}
         self.initiation_dict = initiation_dict
 
         print("NOTE: Discriminative LR Adam is used.")
